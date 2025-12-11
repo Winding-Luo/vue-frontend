@@ -2,13 +2,14 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import Login from '../components/Login.vue';
 import UserList from '../components/UserList.vue';
-import UserForm from '../components/UserForm.vue'; // 假设您有注册/编辑表单
-// import UserDetail from '../components/UserDetail.vue';
+import UserForm from '../components/UserForm.vue';
+// 1. !!关键!!: 取消注释 UserDetail 的导入
+import UserDetail from '../components/UserDetail.vue';
 
 const routes = [
   {
     path: '/',
-    redirect: '/users' // 默认重定向到用户列表
+    redirect: '/users'
   },
   {
     path: '/login',
@@ -16,22 +17,36 @@ const routes = [
     component: Login
   },
   {
-    path: '/register', // 注册页
+    path: '/register',
     name: 'Register',
-    component: UserForm 
+    component: UserForm
   },
   {
     path: '/users',
     name: 'UserList',
     component: UserList,
-    meta: { requiresAuth: true } // 标记这个路由需要认证
+    meta: { requiresAuth: true }
   },
-  // {
-  //   path: '/users/:id',
-  //   name: 'UserDetail',
-  //   component: UserDetail,
-  //   meta: { requiresAuth: true }
-  // },
+  
+  // 2. !!关键!!: 添加 UserDetail 路由，解决保存后的跳转错误
+  {
+    path: '/users/:id',
+    name: 'UserDetail',
+    component: UserDetail,
+    // 开启 props: true，这样组件可以用 props: ['id'] 接收参数
+    props: true, 
+    meta: { requiresAuth: true }
+  },
+
+  // 3. (建议补充) 添加 UserEdit 路由，复用 UserForm 组件
+  // 这样 UserDetail 页面里的 "编辑此用户" 链接才能正常工作
+  {
+    path: '/users/edit/:id',
+    name: 'UserEdit',
+    component: UserForm,
+    props: true, // 让 UserForm 能够接收 id 参数
+    meta: { requiresAuth: true }
+  }
 ];
 
 const router = createRouter({
@@ -39,28 +54,19 @@ const router = createRouter({
   routes
 });
 
-// !!关键!!: 全局路由守卫
+// 全局路由守卫
 router.beforeEach((to, from, next) => {
-  // 1. 尝试从 sessionStorage 获取用户信息
   const user = sessionStorage.getItem('user');
-
-  // 2. 检查路由是否需要认证
   if (to.meta.requiresAuth) {
     if (user) {
-      // 用户已登录 (Session 中有用户信息), 允许访问
       next();
     } else {
-      // 用户未登录, 重定向到登录页
       next('/login');
     }
   } else {
-    // 路由不需要认证 (例如登录页 /login, 注册页 /register)
-    
-    // (可选) 如果用户已登录，并且访问的是登录页/注册页，则重定向到首页
     if ((to.name === 'Login' || to.name === 'Register') && user) {
       next('/');
     } else {
-      // 否则，正常访问
       next();
     }
   }
